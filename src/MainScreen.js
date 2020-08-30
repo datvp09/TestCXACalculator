@@ -14,23 +14,43 @@ const lastMathIndex = mathButtons.length - 1;
 
 const MainScreen = (props) => {
   const _handleEvent = (value) => {
-    console.log('value', value);
     if (value == 'clear') {
-      props.clear();
-    } else if (value == '=') {
-      props.replaceBy('/');
-      props.evaluate();
-    } else {
-      let strLastChar = props.output.slice(-1);
+      return props.clear();
+    }
+    if (value == '=') {
+      const re = /(?:(?:^|[-+_*÷])(?:\s*-?\d+(\.\d+)?(?:[eE][+-]?\d+)?\s*))+$/;
+      const isValidMathExpression = re.test(props.output);
 
-      // new expression replace old expression
-      if (isNaN(strLastChar) && isNaN(value)) {
-        props.replace(value);
-      } else if (props.output !== initialOutput || isNaN(value)) {
+      if (isValidMathExpression) {
+        props.replaceBy('/');
+        props.evaluate();
+        props.resetMath(true);
+      }
+      return;
+    }
+
+    // reset after calculate
+    if (props.reset) {
+      if (isNaN(value)) {
+        // is operator
         props.concat(value);
       } else {
+        // is number
         props.concatWithout(value);
       }
+      props.resetMath(false);
+      return;
+    }
+
+    let strLastChar = props.output.slice(-1);
+
+    // new expression replace old expression
+    if (isNaN(strLastChar) && isNaN(value)) {
+      props.replace(value);
+    } else if (props.output !== initialOutput || isNaN(value)) {
+      props.concat(value);
+    } else {
+      props.concatWithout(value);
     }
   };
 
@@ -39,7 +59,7 @@ const MainScreen = (props) => {
       <StatusBar barStyle={'light-content'} />
       <View style={styles.placeHolderOutput}>
         <Text style={styles.txtDefault}>
-          {props.output.replace(/[/]/, '÷')}
+          {props.output.toString().replace(/[/]/, '÷')}
         </Text>
       </View>
       <View style={styles.contRow}>
@@ -113,7 +133,10 @@ const styles = StyleSheet.create({
   operator: {color: 'white', fontSize: 40, fontWeight: 'bold'},
 });
 
-const mapStateToProps = (state) => ({output: state.calReducer.output});
+const mapStateToProps = (state) => ({
+  output: state.calReducer.output,
+  reset: state.calReducer.reset,
+});
 const mapDispatchToProps = (dispatch) => {
   const {
     clear,
@@ -122,6 +145,7 @@ const mapDispatchToProps = (dispatch) => {
     replaceBy,
     concat,
     concatWithout,
+    resetMath,
   } = require('./actions');
   return {
     clear: () => dispatch(clear()),
@@ -130,6 +154,7 @@ const mapDispatchToProps = (dispatch) => {
     replaceBy: (value) => dispatch(replaceBy(value)),
     concat: (value) => dispatch(concat(value)),
     concatWithout: (value) => dispatch(concatWithout(value)),
+    resetMath: (value) => dispatch(resetMath(value)),
   };
 };
 
